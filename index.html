@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wplace Pixel Converter</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Wplace Pixel Converter</h1>
+    </header>
+
+    <main>
+      <section class="controls">
+        <div class="control-group">
+          <label for="fileInput">Image</label>
+          <input type="file" id="fileInput" accept="image/*" />
+        </div>
+
+        <div class="control-group">
+          <label for="paletteType">Palette</label>
+          <select id="paletteType">
+            <option value="free">Free (31)</option>
+            <option value="full">Full (64)</option>
+            <option value="custom">Custom</option>
+          </select>
+          <button id="customizePaletteBtn" disabled>Customize…</button>
+        </div>
+
+        <div class="control-group">
+          <label for="ditherMethod">Dithering</label>
+          <select id="ditherMethod">
+            <option value="none">None (quantize only)</option>
+            <option disabled>— Error diffusion —</option>
+            <option value="floyd_steinberg">Floyd–Steinberg</option>
+            <option value="jarvis">Jarvis–Judice–Ninke</option>
+            <option value="stucki">Stucki</option>
+            <option value="burkes">Burkes</option>
+            <option value="atkinson">Atkinson</option>
+            <option value="sierra3">Sierra-3</option>
+            <option value="sierra2">Sierra-2-4A</option>
+            <option value="sierra_lite">Sierra Lite</option>
+            <option disabled>— Ordered / Random —</option>
+            <option value="bayer">Bayer 4×4</option>
+            <option value="halftone">Halftone 8×8</option>
+            <option value="random">Random</option>
+          </select>
+          <label class="inline"
+            >Strength <span id="strengthVal" class="value"></span
+          ></label>
+          <input
+            id="strength"
+            type="range"
+            min="0.1"
+            max="1"
+            step="0.01"
+            value="0.8"
+          />
+        </div>
+
+        <!-- Options row: grouped checkboxes -->
+        <div class="control-group">
+          <label class="inline"
+            ><input id="serpentine" type="checkbox" /> Serpentine</label
+          >
+          <label class="inline"
+            ><input id="sharpen" type="checkbox" /> Pre-sharpen</label
+          >
+          <label class="inline"
+            ><input id="removeSemitransparent" type="checkbox" /> Remove
+            semitransparent</label
+          >
+        </div>
+
+        <div class="control-group grid">
+          <div>
+            <label
+              >Brightness <span id="brightnessVal" class="value"></span
+            ></label>
+            <input
+              id="brightness"
+              type="range"
+              min="0.1"
+              max="2"
+              step="0.01"
+              value="1"
+            />
+          </div>
+          <div>
+            <label>Contrast <span id="contrastVal" class="value"></span></label>
+            <input
+              id="contrast"
+              type="range"
+              min="0.1"
+              max="2"
+              step="0.01"
+              value="1"
+            />
+          </div>
+          <div>
+            <label
+              >Saturation <span id="saturationVal" class="value"></span
+            ></label>
+            <input
+              id="saturation"
+              type="range"
+              min="0"
+              max="2"
+              step="0.01"
+              value="1"
+            />
+          </div>
+          <div>
+            <!-- moved Pre-sharpen to options row -->
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Alpha <span id="alphaVal" class="value"></span></label>
+          <input
+            id="alphaThreshold"
+            type="range"
+            min="1"
+            max="255"
+            step="1"
+            value="128"
+          />
+          <!-- moved Remove semitransparent to options row -->
+        </div>
+
+        <div class="control-group">
+          <button id="processBtn">Process</button>
+          <label class="inline"><input id="live" type="checkbox" /> Live</label>
+          <span id="status" class="status"></span>
+        </div>
+
+        <!-- Downloads row -->
+        <div class="control-group button-row">
+          <button id="downloadBtn" disabled>Download PNG</button>
+          <button id="downloadGridBtn" type="button" disabled>
+            Download with Grid
+          </button>
+          <button id="downloadSegmentsBtn" type="button" disabled>
+            Download Segments
+          </button>
+        </div>
+
+        <!-- Grid controls (moved above stats) -->
+        <div class="control-group">
+          <label class="inline">
+            <input id="showGrid" type="checkbox" /> Show grid
+          </label>
+          <label class="inline"
+            >Size <span id="gridSizeVal" class="value"></span
+          ></label>
+          <input
+            id="gridSize"
+            type="number"
+            min="4"
+            max="512"
+            step="4"
+            value="128"
+          />
+        </div>
+
+        <div class="control-group stats-group">
+          <details>
+            <summary>Pixel stats</summary>
+            <div class="stats-toolbar">
+              <button id="updateStatsBtn" type="button">Update</button>
+              <span class="hint"
+                >Counts processed pixels (alpha ≥ threshold)</span
+              >
+            </div>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Hex</th>
+                  <th>Count</th>
+                </tr>
+              </thead>
+              <tbody id="statsBody"></tbody>
+            </table>
+          </details>
+        </div>
+      </section>
+
+      <section class="preview">
+        <div class="preview-box">
+          <canvas id="canvas" width="1024" height="768"></canvas>
+        </div>
+      </section>
+    </main>
+
+    <!-- Custom Palette Dialog -->
+    <dialog id="paletteDialog">
+      <form method="dialog" class="palette-dialog">
+        <header class="dialog-header">
+          <h3>Select custom colors (from Full palette)</h3>
+        </header>
+        <div class="palette-toolbar">
+          <button id="paletteSelectAll" type="button">Select all</button>
+          <button id="paletteClear" type="button">Clear</button>
+        </div>
+        <div id="paletteGrid" class="palette-grid"></div>
+        <footer class="dialog-footer">
+          <button id="paletteCancel" value="cancel" type="button">
+            Cancel
+          </button>
+          <button id="paletteApply" value="default" type="button">Apply</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <script type="module" src="./js/main.js"></script>
+  </body>
+</html>
