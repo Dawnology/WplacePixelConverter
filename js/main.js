@@ -479,46 +479,55 @@ els.downloadGridBtn?.addEventListener("click", async () => {
 });
 
 // Download per-grid segments (skip fully transparent/empty)
-els.downloadSegmentsBtn?.addEventListener("click", async () => {
-  const src = outputImageData || srcImageData;
-  if (!src) return;
-  const size = Number(els.gridSize.value) || 128;
-  const alphaThresh = Number(els.alphaThreshold.value) || 128;
-  const baseName = "segment";
-  let saved = 0;
-  // iterate grid cells
-  for (let gy = 0, row = 0; gy < src.height; gy += size, row++) {
-    for (let gx = 0, col = 0; gx < src.width; gx += size, col++) {
-      const w = Math.min(size, src.width - gx);
-      const h = Math.min(size, src.height - gy);
-      // Extract sub-image
-      const sub = new ImageData(w, h);
-      const srcData = src.data;
-      const dst = sub.data;
-      let hasPixel = false;
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          const si = ((gy + y) * src.width + (gx + x)) * 4;
-          const di = (y * w + x) * 4;
-          dst[di] = srcData[si];
-          dst[di + 1] = srcData[si + 1];
-          dst[di + 2] = srcData[si + 2];
-          dst[di + 3] = srcData[si + 3];
-          if (!hasPixel && srcData[si + 3] >= alphaThresh) hasPixel = true;
+// Replace plain listener with a single-bind guarded listener
+if (els.downloadSegmentsBtn && !els.downloadSegmentsBtn.dataset.bound) {
+  els.downloadSegmentsBtn.dataset.bound = "1";
+  els.downloadSegmentsBtn.addEventListener("click", async () => {
+    const src = outputImageData || srcImageData;
+    if (!src) return;
+    const size = Number(els.gridSize.value) || 128;
+    const alphaThresh = Number(els.alphaThreshold.value) || 128;
+    const baseName = "segment";
+    let saved = 0;
+    // iterate grid cells
+    for (let gy = 0, row = 0; gy < src.height; gy += size, row++) {
+      for (let gx = 0, col = 0; gx < src.width; gx += size, col++) {
+        const w = Math.min(size, src.width - gx);
+        const h = Math.min(size, src.height - gy);
+        // Extract sub-image
+        const sub = new ImageData(w, h);
+        const srcData = src.data;
+        const dst = sub.data;
+        let hasPixel = false;
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const si = ((gy + y) * src.width + (gx + x)) * 4;
+            const di = (y * w + x) * 4;
+            dst[di] = srcData[si];
+            dst[di + 1] = srcData[si + 1];
+            dst[di + 2] = srcData[si + 2];
+            dst[di + 3] = srcData[si + 3];
+            if (!hasPixel && srcData[si + 3] >= alphaThresh) hasPixel = true;
+          }
         }
+        if (!hasPixel) continue; // skip empty
+        // Draw to canvas and download (1-based indices)
+        const tmp = document.createElement("canvas");
+        tmp.width = w;
+        tmp.height = h;
+        tmp.getContext("2d").putImageData(sub, 0, 0);
+        await downloadCanvas(
+          tmp,
+          `${baseName}_${row + 1}_${col + 1}.png`,
+          "image/png"
+        );
+        saved++;
       }
-      if (!hasPixel) continue; // skip empty
-      // Draw to canvas and download
-      const tmp = document.createElement("canvas");
-      tmp.width = w;
-      tmp.height = h;
-      tmp.getContext("2d").putImageData(sub, 0, 0);
-      await downloadCanvas(tmp, `${baseName}_${row}_${col}.png`, "image/png");
-      saved++;
     }
-  }
-  setStatus(`Saved ${saved} segment(s).`);
-});
+    setStatus(`Saved ${saved} segment(s).`);
+  });
+}
+
 // Live processing
 els.live?.addEventListener("change", () => {
   if (els.live.checked) process();

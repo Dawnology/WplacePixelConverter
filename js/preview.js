@@ -170,9 +170,10 @@ function createImageSegments(imageData, segmentSize = 128) {
         segmentWidth,
         segmentHeight
       );
-      const filename = `segment_${Math.floor(y / segmentSize)}_${Math.floor(
-        x / segmentSize
-      )}.png`;
+      // 1-based row/col indices for filenames
+      const rowIndex = Math.floor(y / segmentSize) + 1;
+      const colIndex = Math.floor(x / segmentSize) + 1;
+      const filename = `segment_${rowIndex}_${colIndex}.png`;
 
       segments.push({
         imageData: segmentImageData,
