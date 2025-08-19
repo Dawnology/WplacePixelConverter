@@ -4,7 +4,8 @@ import {
   getPaletteAsRgb,
   ALL_COLOR_NAMES,
 } from "./colors.js";
-import { processImage } from "./imageProcessing.js";
+import { processImage, applyCurvesLUT } from "./imageProcessing.js";
+import { CurvesEditor } from "./curves.js";
 import { displayImageWithGrid, downloadCanvas } from "./preview.js";
 import {
   applyFloydSteinbergDithering,
@@ -43,6 +44,8 @@ const els = {
   sharpen: document.getElementById("sharpen"),
   alphaThreshold: document.getElementById("alphaThreshold"),
   alphaVal: document.getElementById("alphaVal"),
+  curvesEnable: document.getElementById("curvesEnable"),
+  curvesContainer: document.getElementById("curvesContainer"),
   removeSemitransparent: document.getElementById("removeSemitransparent"),
   showGrid: document.getElementById("showGrid"),
   gridSize: document.getElementById("gridSize"),
@@ -67,6 +70,8 @@ const els = {
 let srcImageData = null;
 let outputImageData = null;
 let customPalette = [...FULL_PALETTE_COLORS];
+let curvesEditor = null;
+let currentLuts = null; // {r,g,b,rgb}
 
 const viewState = { zoom: 1, offsetX: 0, offsetY: 0 };
 const panState = { isPanning: false, lastX: 0, lastY: 0 };
@@ -143,6 +148,20 @@ const __canvasResizeObserver = new ResizeObserver(() => {
 });
 __canvasResizeObserver.observe(document.getElementById("canvas"));
 
+// Initialize curves editor
+if (els.curvesContainer) {
+  curvesEditor = new CurvesEditor(els.curvesContainer);
+  curvesEditor.onChange = (curves) => {
+    currentLuts = curves; // store latest LUTs
+    // Reprocess on any curve change for immediate feedback
+    process();
+  };
+  // Seed with initial curves so enabling applies immediately
+  currentLuts = curvesEditor.lastCurves || currentLuts;
+  // Hidden until enabled
+  els.curvesContainer.style.display = "none";
+}
+
 async function process() {
   if (!srcImageData) return;
   setStatus("Processing…");
@@ -161,6 +180,10 @@ async function process() {
     width,
     height
   );
+  // Apply LUT before other image adjustments
+  if (els.curvesEnable?.checked && currentLuts) {
+    working = applyCurvesLUT(working, currentLuts);
+  }
   working = processImage(working, width, height, config);
 
   const paletteHex = getActivePaletteHex();
@@ -435,6 +458,16 @@ els.fileInput.addEventListener("change", async (e) => {
 els.paletteType.addEventListener("change", () => {
   const isCustom = els.paletteType.value === "custom";
   els.customizePaletteBtn.disabled = !isCustom;
+});
+
+// Curves toggle
+els.curvesEnable?.addEventListener("change", () => {
+  if (!els.curvesContainer) return;
+  els.curvesContainer.style.display = els.curvesEnable.checked
+    ? "block"
+    : "none";
+  // Re-process once on toggle so users see effect immediately
+  process();
 });
 
 els.processBtn.addEventListener("click", process);

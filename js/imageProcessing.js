@@ -159,10 +159,40 @@ function processImage(imageData, width, height, config) {
   return processedData;
 }
 
+/**
+ * Apply RGB curves LUT to ImageData. Applies in order: global RGB, then per-channel R/G/B.
+ * @param {ImageData} imageData
+ * @param {{r?:Uint8Array,g?:Uint8Array,b?:Uint8Array,rgb?:Uint8Array}} curves
+ * @returns {ImageData}
+ */
+function applyCurvesLUT(imageData, curves) {
+  if (!curves) return imageData;
+  const { rgb: lutRGB, r: lutR, g: lutG, b: lutB } = curves;
+  const data = imageData.data;
+  // Global RGB curve
+  if (lutRGB) {
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = lutRGB[data[i]];
+      data[i + 1] = lutRGB[data[i + 1]];
+      data[i + 2] = lutRGB[data[i + 2]];
+    }
+  }
+  // Per-channel
+  if (lutR || lutG || lutB) {
+    for (let i = 0; i < data.length; i += 4) {
+      if (lutR) data[i] = lutR[data[i]];
+      if (lutG) data[i + 1] = lutG[data[i + 1]];
+      if (lutB) data[i + 2] = lutB[data[i + 2]];
+    }
+  }
+  return imageData;
+}
+
 export {
   adjustBrightness,
   adjustContrast,
   adjustSaturation,
   applySharpen,
+  applyCurvesLUT,
   processImage,
 };

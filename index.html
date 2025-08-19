@@ -129,6 +129,14 @@
           <!-- moved Remove semitransparent to options row -->
         </div>
 
+        <!-- RGB Curves / LUT editor -->
+        <div class="control-group">
+          <label class="inline">
+            <input id="curvesEnable" type="checkbox" /> RGB Curves
+          </label>
+          <div id="curvesContainer" class="curves-container"></div>
+        </div>
+
         <div class="control-group">
           <button id="processBtn">Process</button>
           <label class="inline"><input id="live" type="checkbox" /> Live</label>
@@ -214,6 +222,6 @@
       </form>
     </dialog>
 
-    <script type="module" src="./js/main.js?v=2"></script>
+    <script type="module" src="./js/main.js?v=3"></script>
   </body>
 </html>

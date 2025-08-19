@@ -1,3 +1,28 @@
+/* Curves editor */
+.curves-container {
+  margin-top: 6px;
+}
+.curves {
+  border: 1px solid #ccc;
+  padding: 8px;
+  background: #fafafa;
+}
+.curves-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.curves-canvas {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  image-rendering: pixelated;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+.curves-toolbar {
+  margin-top: 6px;
+}
 * {
   box-sizing: border-box;
 }
