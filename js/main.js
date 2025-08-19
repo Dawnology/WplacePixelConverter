@@ -446,6 +446,10 @@ els.updateStatsBtn?.addEventListener("click", updateStats);
 
 // Download with grid overlay
 els.downloadGridBtn?.addEventListener("click", async () => {
+  // Ensure image has been processed before exporting with grid
+  if (!outputImageData && srcImageData) {
+    await process();
+  }
   const src = outputImageData || srcImageData;
   if (!src) return;
   // Draw into a temporary canvas at image resolution with grid
@@ -483,6 +487,10 @@ els.downloadGridBtn?.addEventListener("click", async () => {
 if (els.downloadSegmentsBtn && !els.downloadSegmentsBtn.dataset.bound) {
   els.downloadSegmentsBtn.dataset.bound = "1";
   els.downloadSegmentsBtn.addEventListener("click", async () => {
+    // Ensure image has been processed before exporting segments
+    if (!outputImageData && srcImageData) {
+      await process();
+    }
     const src = outputImageData || srcImageData;
     if (!src) return;
     const size = Number(els.gridSize.value) || 128;
