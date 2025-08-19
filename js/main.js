@@ -7,6 +7,7 @@ import {
 import { processImage, applyCurvesLUT } from "./imageProcessing.js";
 import { CurvesEditor } from "./curves.js";
 import { displayImageWithGrid, downloadCanvas } from "./preview.js";
+import { zipFiles } from "./zip.js";
 import {
   applyFloydSteinbergDithering,
   applyNoDithering,
@@ -390,6 +391,17 @@ function buildPaletteDialog(selectedSet) {
     cb.type = "checkbox";
     cb.checked = selectedSet.has(hex);
     cb.dataset.hex = hex;
+    // While dialog open, reflect changes into temp selection and live preview
+    cb.addEventListener("input", () => {
+      if (cb.checked) selectedSet.add(hex);
+      else selectedSet.delete(hex);
+      if (els.live?.checked) {
+        customPalette = Array.from(selectedSet);
+        // keep at least black/white as a fallback to avoid empty palette issues
+        if (!customPalette.length) customPalette = ["#000000", "#ffffff"];
+        process();
+      }
+    });
 
     const name = document.createElement("span");
     name.textContent = ALL_COLOR_NAMES?.[hex] || hex;
@@ -409,15 +421,24 @@ els.customizePaletteBtn?.addEventListener("click", () => {
 });
 
 els.paletteSelectAll?.addEventListener("click", () => {
+  const selected = new Set(FULL_PALETTE_COLORS);
   els.paletteGrid
     .querySelectorAll("input[type=checkbox]")
     .forEach((cb) => (cb.checked = true));
+  if (els.live?.checked) {
+    customPalette = Array.from(selected);
+    process();
+  }
 });
 
 els.paletteClear?.addEventListener("click", () => {
   els.paletteGrid
     .querySelectorAll("input[type=checkbox]")
     .forEach((cb) => (cb.checked = false));
+  if (els.live?.checked) {
+    customPalette = ["#000000", "#ffffff"];
+    process();
+  }
 });
 
 els.paletteApply?.addEventListener("click", () => {
@@ -427,6 +448,7 @@ els.paletteApply?.addEventListener("click", () => {
   });
   customPalette = chosen.length ? chosen : ["#000000", "#ffffff"];
   els.paletteDialog.close();
+  if (els.live?.checked) process();
 });
 
 els.paletteCancel?.addEventListener("click", () => els.paletteDialog.close());
@@ -458,6 +480,7 @@ els.fileInput.addEventListener("change", async (e) => {
 els.paletteType.addEventListener("change", () => {
   const isCustom = els.paletteType.value === "custom";
   els.customizePaletteBtn.disabled = !isCustom;
+  if (els.live?.checked) process();
 });
 
 // Curves toggle
@@ -472,8 +495,18 @@ els.curvesEnable?.addEventListener("change", () => {
 
 els.processBtn.addEventListener("click", process);
 els.downloadBtn.addEventListener("click", async () => {
-  if (!outputImageData) return;
-  await downloadCanvas(els.canvas, "pixelated.png", "image/png");
+  // Always export the full processed image at natural resolution,
+  // ignoring the current zoom/pan of the preview canvas.
+  if (!outputImageData && srcImageData) {
+    await process();
+  }
+  const src = outputImageData || srcImageData;
+  if (!src) return;
+  const tmp = document.createElement("canvas");
+  tmp.width = src.width;
+  tmp.height = src.height;
+  tmp.getContext("2d").putImageData(src, 0, 0);
+  await downloadCanvas(tmp, "pixelated.png", "image/png");
 });
 els.updateStatsBtn?.addEventListener("click", updateStats);
 
@@ -530,6 +563,7 @@ if (els.downloadSegmentsBtn && !els.downloadSegmentsBtn.dataset.bound) {
     const alphaThresh = Number(els.alphaThreshold.value) || 128;
     const baseName = "segment";
     let saved = 0;
+    const files = [];
     // iterate grid cells
     for (let gy = 0, row = 0; gy < src.height; gy += size, row++) {
       for (let gx = 0, col = 0; gx < src.width; gx += size, col++) {
@@ -552,20 +586,37 @@ if (els.downloadSegmentsBtn && !els.downloadSegmentsBtn.dataset.bound) {
           }
         }
         if (!hasPixel) continue; // skip empty
-        // Draw to canvas and download (1-based indices)
+        // Draw to canvas to get a PNG Blob (1-based indices)
         const tmp = document.createElement("canvas");
         tmp.width = w;
         tmp.height = h;
         tmp.getContext("2d").putImageData(sub, 0, 0);
-        await downloadCanvas(
-          tmp,
-          `${baseName}_${row + 1}_${col + 1}.png`,
-          "image/png"
-        );
+        const blob = await (async () => {
+          return new Promise((resolve) => tmp.toBlob(resolve, "image/png"));
+        })();
+        if (!blob) continue;
+        const ab = await blob.arrayBuffer();
+        files.push({
+          name: `${baseName}_${row + 1}_${col + 1}.png`,
+          data: ab,
+        });
         saved++;
       }
     }
-    setStatus(`Saved ${saved} segment(s).`);
+    if (!files.length) {
+      setStatus("No non-empty segments to save.");
+      return;
+    }
+    const zipBlob = await zipFiles(files);
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "segments.zip";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setStatus(`Zipped ${saved} segment(s).`);
   });
 }
 
