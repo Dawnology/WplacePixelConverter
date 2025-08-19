@@ -154,8 +154,8 @@ if (els.curvesContainer) {
   curvesEditor = new CurvesEditor(els.curvesContainer);
   curvesEditor.onChange = (curves) => {
     currentLuts = curves; // store latest LUTs
-    // Reprocess on any curve change for immediate feedback
-    process();
+    // Only auto-process when Live is enabled
+    if (els.live?.checked) process();
   };
   // Seed with initial curves so enabling applies immediately
   currentLuts = curvesEditor.lastCurves || currentLuts;
@@ -489,8 +489,8 @@ els.curvesEnable?.addEventListener("change", () => {
   els.curvesContainer.style.display = els.curvesEnable.checked
     ? "block"
     : "none";
-  // Re-process once on toggle so users see effect immediately
-  process();
+  // Only re-process automatically if Live is on
+  if (els.live?.checked) process();
 });
 
 els.processBtn.addEventListener("click", process);
