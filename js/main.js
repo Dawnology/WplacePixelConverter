@@ -1,5 +1,6 @@
 import {
   FREE_PALETTE_COLORS,
+  EXTRA_PALETTE_COLORS,
   FULL_PALETTE_COLORS,
   getPaletteAsRgb,
   ALL_COLOR_NAMES,
@@ -63,6 +64,8 @@ const els = {
   paletteDialog: document.getElementById("paletteDialog"),
   paletteGrid: document.getElementById("paletteGrid"),
   paletteSelectAll: document.getElementById("paletteSelectAll"),
+  paletteSelectFree: document.getElementById("paletteSelectFree"),
+  paletteSelectPremium: document.getElementById("paletteSelectPremium"),
   paletteClear: document.getElementById("paletteClear"),
   paletteApply: document.getElementById("paletteApply"),
   paletteCancel: document.getElementById("paletteCancel"),
@@ -415,6 +418,8 @@ function buildPaletteDialog(selectedSet) {
 }
 
 els.customizePaletteBtn?.addEventListener("click", () => {
+  // Ensure toolbar has quick-select buttons even if HTML wasn't updated/cached
+  ensurePaletteToolbarButtons();
   const selected = new Set(customPalette);
   buildPaletteDialog(selected);
   els.paletteDialog.showModal();
@@ -427,6 +432,32 @@ els.paletteSelectAll?.addEventListener("click", () => {
     .forEach((cb) => (cb.checked = true));
   if (els.live?.checked) {
     customPalette = Array.from(selected);
+    process();
+  }
+});
+
+// Select exactly all FREE colors
+els.paletteSelectFree?.addEventListener("click", () => {
+  const freeSet = new Set(FREE_PALETTE_COLORS);
+  els.paletteGrid.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+    const hex = cb.dataset.hex;
+    cb.checked = freeSet.has(hex);
+  });
+  if (els.live?.checked) {
+    customPalette = Array.from(freeSet);
+    process();
+  }
+});
+
+// Select exactly all PREMIUM colors (extra set)
+els.paletteSelectPremium?.addEventListener("click", () => {
+  const premiumSet = new Set(EXTRA_PALETTE_COLORS);
+  els.paletteGrid.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+    const hex = cb.dataset.hex;
+    cb.checked = premiumSet.has(hex);
+  });
+  if (els.live?.checked) {
+    customPalette = Array.from(premiumSet);
     process();
   }
 });
@@ -704,4 +735,78 @@ if (els.gridSize && els.gridSizeVal) {
     "input",
     () => (els.gridSizeVal.textContent = String(els.gridSize.value))
   );
+}
+
+// --- Helpers ---
+function ensurePaletteToolbarButtons() {
+  const dialog = els.paletteDialog;
+  if (!dialog) return;
+  const toolbar = dialog.querySelector(".palette-toolbar");
+  if (!toolbar) return;
+
+  // Insert Free/Premium if missing
+  let btnFree = toolbar.querySelector("#paletteSelectFree");
+  let btnPremium = toolbar.querySelector("#paletteSelectPremium");
+
+  // Find reference nodes to place between Select all and Clear
+  const btnAll = toolbar.querySelector("#paletteSelectAll");
+  const btnClear = toolbar.querySelector("#paletteClear");
+
+  if (!btnFree) {
+    btnFree = document.createElement("button");
+    btnFree.id = "paletteSelectFree";
+    btnFree.type = "button";
+    btnFree.textContent = "Select free";
+    // Insert after Select all if present, else at start
+    if (btnAll && btnAll.nextSibling) {
+      toolbar.insertBefore(btnFree, btnAll.nextSibling);
+    } else {
+      toolbar.insertBefore(btnFree, btnClear || null);
+    }
+  }
+  if (!btnPremium) {
+    btnPremium = document.createElement("button");
+    btnPremium.id = "paletteSelectPremium";
+    btnPremium.type = "button";
+    btnPremium.textContent = "Select premium";
+    // Place after Free button if present
+    if (btnFree && btnFree.nextSibling) {
+      toolbar.insertBefore(btnPremium, btnFree.nextSibling);
+    } else if (btnAll && btnAll.nextSibling) {
+      toolbar.insertBefore(btnPremium, btnAll.nextSibling);
+    } else {
+      toolbar.insertBefore(btnPremium, btnClear || null);
+    }
+  }
+
+  // Wire handlers once
+  if (!btnFree.dataset.bound) {
+    btnFree.dataset.bound = "1";
+    btnFree.addEventListener("click", () => {
+      const freeSet = new Set(FREE_PALETTE_COLORS);
+      els.paletteGrid.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+        const hex = cb.dataset.hex;
+        cb.checked = freeSet.has(hex);
+      });
+      if (els.live?.checked) {
+        customPalette = Array.from(freeSet);
+        process();
+      }
+    });
+  }
+
+  if (!btnPremium.dataset.bound) {
+    btnPremium.dataset.bound = "1";
+    btnPremium.addEventListener("click", () => {
+      const premiumSet = new Set(EXTRA_PALETTE_COLORS);
+      els.paletteGrid.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+        const hex = cb.dataset.hex;
+        cb.checked = premiumSet.has(hex);
+      });
+      if (els.live?.checked) {
+        customPalette = Array.from(premiumSet);
+        process();
+      }
+    });
+  }
 }

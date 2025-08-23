@@ -329,7 +329,7 @@ class CurvesEditor {
 
     const mode = this.mode;
     const channels = mode === "rgb" ? ["rgb"] : [mode];
-    const colors = { rgb: "#000", r: "#c33", g: "#3c3", b: "#36c" };
+    const colors = { rgb: "#000000ff", r: "#c33", g: "#3c3", b: "#36c" };
 
     channels.forEach((ch) => {
       // curve path

@@ -179,6 +179,7 @@ function createCustomPalette(selectedColors) {
 
 export {
   FREE_PALETTE_COLORS,
+  EXTRA_PALETTE_COLORS,
   FULL_PALETTE_COLORS,
   FREE_COLOR_NAMES,
   ALL_COLOR_NAMES,
